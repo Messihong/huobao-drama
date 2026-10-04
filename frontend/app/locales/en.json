@@ -996,5 +996,19 @@
     "back": "Back",
     "confirmDelete": "Delete",
     "unlinked": "{type} removed from this episode"
+  },
+  "scriptLinks": {
+    "preview": "Preview",
+    "edit": "Edit",
+    "previewTip": "Preview: existing characters/scenes/props in the text are shown as links; click to open the asset",
+    "dblclickEdit": "Double-click to edit",
+    "kind": {
+      "character": "Character",
+      "scene": "Scene",
+      "prop": "Prop"
+    },
+    "imageReady": "image ready",
+    "imageTodo": "no image yet",
+    "clickOpen": "click to open"
   }
 }

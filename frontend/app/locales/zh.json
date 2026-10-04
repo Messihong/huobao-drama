@@ -996,5 +996,19 @@
     "back": "返回",
     "confirmDelete": "确认删除",
     "unlinked": "已将{type}移出本集"
+  },
+  "scriptLinks": {
+    "preview": "预览",
+    "edit": "编辑",
+    "previewTip": "预览：文中已有的角色/场景/道具显示为链接，点击查看素材",
+    "dblclickEdit": "双击进入编辑",
+    "kind": {
+      "character": "角色",
+      "scene": "场景",
+      "prop": "道具"
+    },
+    "imageReady": "形象已生成",
+    "imageTodo": "形象未生成",
+    "clickOpen": "点击查看"
   }
 }

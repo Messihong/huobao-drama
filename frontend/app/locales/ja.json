@@ -996,5 +996,19 @@
     "back": "戻る",
     "confirmDelete": "削除する",
     "unlinked": "{type}をこの話から外しました"
+  },
+  "scriptLinks": {
+    "preview": "プレビュー",
+    "edit": "編集",
+    "previewTip": "プレビュー：本文中の既存キャラクター/シーン/小道具をリンク表示し、クリックで素材を開きます",
+    "dblclickEdit": "ダブルクリックで編集",
+    "kind": {
+      "character": "キャラクター",
+      "scene": "シーン",
+      "prop": "小道具"
+    },
+    "imageReady": "画像生成済み",
+    "imageTodo": "画像未生成",
+    "clickOpen": "クリックで表示"
   }
 }
