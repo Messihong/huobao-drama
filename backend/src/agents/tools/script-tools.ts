@@ -8,6 +8,7 @@ import { db, schema } from '../../db/index.js'
 import { and, eq, isNull } from 'drizzle-orm'
 import { now } from '../../utils/response.js'
 import { getDramaId, getEpisodeId } from '../context.js'
+import { getBannedWords, applyBannedWords } from '../../services/app-settings.js'
 
 /**
  * 本剧已有素材（角色/场景/道具），供改写时沿用同名以便后续提取阶段按名去重、复用形象图。
@@ -40,6 +41,18 @@ async function withAssets(episode: { dramaId: number }, requestContext: any) {
   return assets ? { existing_assets: assets, asset_reuse_guide: ASSET_REUSE_GUIDE } : {}
 }
 
+/** 屏蔽词规则（随读取工具一起返回给改写 Agent）；没有配置时不返回 */
+function bannedWordsPayload() {
+  const list = getBannedWords()
+  if (!list.length) return {}
+  return {
+    banned_words: list,
+    banned_words_rule: `【屏蔽词规则】剧本中不得出现 banned_words 里的任何词（容易触发后续生图/生视频的内容审核）。
+有 replace 的用 replace 代替；没有 replace 的请换一种不含该词的说法表达同样的意思，保持剧情不变。
+save_script 会再次检查：有替换词的会被自动替换，无替换词的会被拒绝保存。`,
+  }
+}
+
 const readEpisodeScript = createTool({
   id: 'read_episode_script',
   description: 'Read the script content of the current episode, plus the existing characters/scenes/props of this drama (existing_assets) that should be reused by exact name.',
@@ -52,7 +65,7 @@ const readEpisodeScript = createTool({
     if (!ep) return { error: `Episode not found (id=${episodeId})` }
     const content = ep.content || ep.scriptContent
     if (!content) return { error: `Episode has no content (id=${episodeId})` }
-    return { content, word_count: content.length, episode_id: episodeId, ...(await withAssets(ep, context?.requestContext)) }
+    return { content, word_count: content.length, episode_id: episodeId, ...(await withAssets(ep, context?.requestContext)), ...bannedWordsPayload() }
   },
 })
 
@@ -73,6 +86,7 @@ const rewriteToScreenplay = createTool({
 
     return {
       ...(await withAssets(ep, context?.requestContext)),
+      ...bannedWordsPayload(),
       source_content: source,
       instruction: `请将以下内容改写为格式化剧本。
 
@@ -99,11 +113,22 @@ const saveScript = createTool({
   execute: async ({ content }, context) => {
     const episodeId = getEpisodeId(context?.requestContext)
     if (!episodeId) return { error: 'Missing episodeId in request context' }
+    // 屏蔽词兜底：有替换词的自动替换；仍残留无替换词的屏蔽词则拒绝保存，让 Agent 改写后重试
+    const checked = applyBannedWords(content)
+    if (checked.remaining.length) {
+      return {
+        error: `剧本中仍包含屏蔽词：${checked.remaining.join('、')}。请把这些词换成不含它们的说法（保持剧情不变）后重新调用 save_script。`,
+      }
+    }
     await db.update(schema.episodes)
-      .set({ scriptContent: content, updatedAt: now() })
+      .set({ scriptContent: checked.text, updatedAt: now() })
       .where(eq(schema.episodes.id, episodeId))
 
-    return { message: `Script saved`, word_count: content.length }
+    return {
+      message: `Script saved`,
+      word_count: checked.text.length,
+      ...(checked.replaced.length ? { banned_words_replaced: checked.replaced } : {}),
+    }
   },
 })
 
