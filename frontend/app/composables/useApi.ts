@@ -60,6 +60,9 @@ export const episodeAPI = {
   assetLibrary: (id: number, type: string) => api.get(`/episodes/${id}/asset-library?type=${type}`),
   linkAssets: (id: number, type: string, ids: number[]) => api.post(`/episodes/${id}/asset-links`, { type, ids }),
   unlinkAsset: (id: number, type: string, assetId: number) => api.del(`/episodes/${id}/asset-links/${type}/${assetId}`),
+  // 素材改名：{ name, cascade?, dry_run? }，cascade 同步替换本剧剧本/分镜中的旧名
+  renameAsset: (type: string, assetId: number, data: { name: string; cascade?: boolean; dry_run?: boolean }) =>
+    api.post(`/episodes/assets/${type}/${assetId}/rename`, data),
 }
 
 export const storyboardAPI = {
