@@ -125,5 +125,25 @@ export async function renameAsset(kind: AssetKind, id: number, newNameRaw: strin
     }
   })
 
+  // [local] 配音联动：角色改名时音色绑定与台词说话人跟着改，台词正文里的旧名按 cascade 替换（需重新合成）
+  if (kind === 'character' && newName !== oldName) {
+    const voices = await db.select().from(schema.dubVoices).where(eq(schema.dubVoices.dramaId, dramaId))
+    if (voices.some(v => v.speaker === oldName) && !voices.some(v => v.speaker === newName)) {
+      await db.update(schema.dubVoices).set({ speaker: newName, updatedAt: ts })
+        .where(and(eq(schema.dubVoices.dramaId, dramaId), eq(schema.dubVoices.speaker, oldName)))
+    }
+    if (epIds.length) {
+      await db.update(schema.dubLines).set({ speaker: newName, updatedAt: ts })
+        .where(and(inArray(schema.dubLines.episodeId, epIds), eq(schema.dubLines.speaker, oldName)))
+      if (cascade) {
+        const lines = await db.select().from(schema.dubLines).where(inArray(schema.dubLines.episodeId, epIds))
+        for (const l of lines.filter(l => l.text.includes(oldName))) {
+          await db.update(schema.dubLines).set({ text: l.text.split(oldName).join(newName), status: 'pending', updatedAt: ts })
+            .where(eq(schema.dubLines.id, l.id))
+        }
+      }
+    }
+  }
+
   return { oldName, newName, cascaded: cascade, hits }
 }
